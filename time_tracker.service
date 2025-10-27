@@ -1,0 +1,7 @@
+[Unit]
+Description=Work Time Tracker
+Documentation=Track machine uptime for work hours
+
+[Service]
+Type=oneshot
+ExecStart=/home/%u/.local/bin/time_tracker.sh

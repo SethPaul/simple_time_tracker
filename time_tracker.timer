@@ -1,0 +1,11 @@
+[Unit]
+Description=Work Time Tracker Timer
+Documentation=Runs every 10 minutes to track work time
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
