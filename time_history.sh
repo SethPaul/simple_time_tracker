@@ -49,8 +49,12 @@ display_day() {
     START=$(echo "$TIMES" | head -1 | cut -d' ' -f2)
     END=$(echo "$TIMES" | tail -1 | cut -d' ' -f2)
     
-    # Get minutes
-    TOTAL_MINS=$(get_minutes "$DATE" "$DATA")
+    # Calculate minutes directly
+    START_MINS=$(echo "$START" | awk -F: '{print $1 * 60 + $2}')
+    END_MINS=$(echo "$END" | awk -F: '{print $1 * 60 + $2}')
+    DIFF_MINS=$((END_MINS - START_MINS))
+    TOTAL_MINS=$((DIFF_MINS + 10))
+    
     HOURS=$(awk "BEGIN {printf \"%.1f\", $TOTAL_MINS / 60}")
     
     DAY_NAME=$(date -d "$DATE" '+%A' 2>/dev/null || echo "")
