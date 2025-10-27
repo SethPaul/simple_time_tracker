@@ -5,14 +5,38 @@ LOG_DIR="$HOME/.worktime"
 LOG_FILE="$LOG_DIR/worklog.txt"
 ARCHIVE_DIR="$LOG_DIR/archive"
 
-# Function to calculate hours from timestamps
-calculate_hours() {
+# Function to calculate minutes for a date
+get_minutes() {
     local DATE=$1
     local DATA=$2
     
-    if [ -z "$DATA" ]; then
+    # Extract times for this date
+    TIMES=$(echo "$DATA" | grep "^$DATE" | sort -u)
+    
+    if [ -z "$TIMES" ]; then
+        echo "0"
         return
     fi
+    
+    # Get start and end times
+    START=$(echo "$TIMES" | head -1 | cut -d' ' -f2)
+    END=$(echo "$TIMES" | tail -1 | cut -d' ' -f2)
+    
+    # Calculate actual minutes from time span
+    START_MINS=$(echo "$START" | awk -F: '{print $1 * 60 + $2}')
+    END_MINS=$(echo "$END" | awk -F: '{print $1 * 60 + $2}')
+    DIFF_MINS=$((END_MINS - START_MINS))
+    
+    # Add 10 minutes to account for the last interval
+    TOTAL_MINS=$((DIFF_MINS + 10))
+    
+    echo "$TOTAL_MINS"
+}
+
+# Function to display a day
+display_day() {
+    local DATE=$1
+    local DATA=$2
     
     # Extract times for this date
     TIMES=$(echo "$DATA" | grep "^$DATE" | sort -u)
@@ -25,26 +49,24 @@ calculate_hours() {
     START=$(echo "$TIMES" | head -1 | cut -d' ' -f2)
     END=$(echo "$TIMES" | tail -1 | cut -d' ' -f2)
     
-    # Count intervals
-    COUNT=$(echo "$TIMES" | wc -l)
-    HOURS=$(awk "BEGIN {printf \"%.1f\", $COUNT * 10 / 60}")
+    # Get minutes
+    TOTAL_MINS=$(get_minutes "$DATE" "$DATA")
+    HOURS=$(awk "BEGIN {printf \"%.1f\", $TOTAL_MINS / 60}")
     
     DAY_NAME=$(date -d "$DATE" '+%A' 2>/dev/null || echo "")
     
-    printf "%-10s (%s): %s - %s  [~%.1f hours]\n" "$DATE" "$DAY_NAME" "$START" "$END" "$HOURS"
-    
-    echo "$COUNT"
+    printf "%-10s (%s): %s - %s  [%.1f hours]\n" "$DATE" "$DAY_NAME" "$START" "$END" "$HOURS"
 }
 
 # Parse arguments
 if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    echo "Usage: worktime-history.sh [days_back]"
+    echo "Usage: time_history.sh [days_back]"
     echo ""
     echo "Examples:"
-    echo "  worktime-history.sh           # Last 7 days (default)"
-    echo "  worktime-history.sh 14        # Last 14 days"
-    echo "  worktime-history.sh 30        # Last 30 days"
-    echo "  worktime-history.sh 90        # Last 90 days"
+    echo "  time_history.sh           # Last 7 days (default)"
+    echo "  time_history.sh 14        # Last 14 days"
+    echo "  time_history.sh 30        # Last 30 days"
+    echo "  time_history.sh 90        # Last 90 days"
     echo ""
     echo "Data location: $LOG_DIR"
     echo "Archives: $ARCHIVE_DIR"
@@ -83,17 +105,17 @@ if [ -z "$ALL_DATA" ]; then
 fi
 
 # Process each day
-TOTAL_COUNT=0
+TOTAL_MINS=0
 for i in $(seq 0 $((DAYS_BACK - 1))); do
     DATE=$(date -d "$i days ago" '+%Y-%m-%d')
-    COUNT=$(calculate_hours "$DATE" "$ALL_DATA")
-    if [ -n "$COUNT" ]; then
-        TOTAL_COUNT=$((TOTAL_COUNT + COUNT))
-    fi
+    display_day "$DATE" "$ALL_DATA"
+    MINS=$(get_minutes "$DATE" "$ALL_DATA")
+    TOTAL_MINS=$((TOTAL_MINS + MINS))
 done
 
 echo ""
 echo "Total Hours Last $DAYS_BACK Days:"
-TOTAL_HOURS=$(awk "BEGIN {printf \"%.1f\", $TOTAL_COUNT * 10 / 60}")
+TOTAL_HOURS=$(awk "BEGIN {printf \"%.1f\", $TOTAL_MINS / 60}")
 echo "  $TOTAL_HOURS hours"
-echo "  $(awk "BEGIN {printf \"%.1f\", $TOTAL_HOURS / 5}") hours/day (5-day average)"
+AVG_HOURS=$(awk "BEGIN {printf \"%.1f\", $TOTAL_HOURS / 5}")
+echo "  $AVG_HOURS hours/day (5-day work week average)"
